@@ -1,21 +1,20 @@
 const express = require('express');
-const cheerio  = require('cheerio');
+const cheerio = require('cheerio');
 const app = express();
 const fs = require("fs");
 const request = require('request-promise');
-const https = require('https');  
 
 app.listen('3000', () => {
     console.log("Server running on port 3000");
 });
 
-app.get("/page/:id", (req, res, next) => {
-    fs.readFile("./data/page" + req.params.id + ".json", "utf8", (err, jsonString) => {
-        if(err) {
+app.get("/downloadedPage/:id", async (req, res, next) => {
+    await fs.readFile("./data/page" + req.params.id + ".json", "utf8", (err, jsonString) => {
+        if (err) {
             res.json({
                 status: "OK",
                 data: null,
-                message: err,
+                message: "This file can't be found",
             });
             return;
         }
@@ -27,16 +26,16 @@ app.get("/page/:id", (req, res, next) => {
     });
 });
 
-app.get("/dynamicpage/:id", (req, res, next) => {
-    request('https://nmac.to/blog/page/'+req.params.id+'/', (error, response, html) => {
+app.get("/dynamicPage/:id", async (req, res, next) => {
+    await request('https://nmac.to/blog/page/' + req.params.id + '/', (error, response, html) => {
         const $ = cheerio.load(html);
-    
-        var result = $('.panel-wrapper').map((i,el) => {
-            var link = $(el).find('a').attr('href');
-            var img = $(el).find('img').attr('src');
-            var baslik = $(el).find('h2').text();
-            var icerik = $(el).find('div.excerpt').text();
-            if(link) {
+
+        let result = $('.panel-wrapper').map((i, el) => {
+            let link = $(el).find('a').attr('href');
+            let img = $(el).find('img').attr('src');
+            let baslik = $(el).find('h2').text();
+            let icerik = $(el).find('div.excerpt').text();
+            if (link) {
                 return {
                     link: link,
                     image: img,
@@ -45,7 +44,7 @@ app.get("/dynamicpage/:id", (req, res, next) => {
                 };
             }
         }).get();
-        
+
         res.json({
             status: "OK",
             data: result,
@@ -54,30 +53,35 @@ app.get("/dynamicpage/:id", (req, res, next) => {
     });
 });
 
-app.get('/test', (req, res, next) => {
+app.get("/downloadAllPage", async (req, res, next) => {
+    let pageNumber = 0;
+    await request('https://nmac.to/', (error, response, html) => {
+        const $ = cheerio.load(html);
+        let element = [];
+        $('.sort-buttons').children().map((i, el) => {
+            let link = $(el).attr('href');
+            element.push(link);
+        }).get();
 
-    for (i=1; i<=722; i++) {
-        getData(i);
-    }
-    
-    res.json({
-        status: "OK",
-        data: "All Data Successfully Saved",
-        message: "success",
+        let sonuc = element[element.length - 1].split('/');
+        pageNumber =  sonuc[sonuc.length - 2];
     });
-});
 
-var getData = async (pageNumber) => {
-    try {
-        request('https://nmac.to/blog/page/'+pageNumber+'/', (error, response, html) => {
+    let result = {
+        status: "OK",
+        data: [],
+        message: "success",
+    };
+
+    for (let i = 1; i <= pageNumber; i++) {
+        await request('https://nmac.to/blog/page/' + i, async (error, response, html) => {
             const $ = cheerio.load(html);
-        
-            var result = $('.panel-wrapper').map((i,el) => {
-                var link = $(el).find('a').attr('href');
-                var img = $(el).find('img').attr('src');
-                var baslik = $(el).find('h2').text();
-                var icerik = $(el).find('div.excerpt').text();
-                if(link) {
+            let result = $('.panel-wrapper').map((i, el) => {
+                let link = $(el).find('a').attr('href');
+                let img = $(el).find('img').attr('src');
+                let baslik = $(el).find('h2').text();
+                let icerik = $(el).find('div.excerpt').text();
+                if (link) {
                     return {
                         link: link,
                         image: img,
@@ -86,13 +90,13 @@ var getData = async (pageNumber) => {
                     };
                 }
             }).get()
-        
-            fs.writeFile("data/page"+pageNumber+".json", JSON.stringify(result), 'utf8', function (err) {
-                console.log("JSON file " + pageNumber + ". page saved");
-            });
+
+            await fs.writeFile("data/page" + i + ".json", JSON.stringify(result), 'utf8', function () {});
         });
-        await new Promise(resolve => setTimeout(resolve, pageNumber*200));
-    }catch(e) {
-        console.log(e);
+        let page = "Data Successfully Saved Page: " + i;
+        console.log(page);
+        result.data.push(page);
     }
-}
+
+    res.json(result);
+});
