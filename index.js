@@ -9,6 +9,7 @@ app.listen('3000', () => {
 });
 
 app.get("/downloadedPage/:id", async (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
     await fs.readFile("./data/page" + req.params.id + ".json", "utf8", (err, jsonString) => {
         if (err) {
             res.json({
@@ -27,6 +28,7 @@ app.get("/downloadedPage/:id", async (req, res, next) => {
 });
 
 app.get("/dynamicPage/:id", async (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
     await request('https://nmac.to/blog/page/' + req.params.id + '/', (error, response, html) => {
         const $ = cheerio.load(html);
 
@@ -53,7 +55,40 @@ app.get("/dynamicPage/:id", async (req, res, next) => {
     });
 });
 
+app.get("/getMaxPageNumber", async (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    let pageNumber = 0;
+
+    let result = {
+        status: "OK",
+        data: {"maxPageNumber": pageNumber},
+        message: "success",
+    };
+
+    try {
+        await request('https://nmac.to/', (error, response, html) => {
+            const $ = cheerio.load(html);
+            let element = [];
+            $('.sort-buttons').children().map((i, el) => {
+                let link = $(el).attr('href');
+                element.push(link);
+            }).get();
+
+            let sonuc = element[element.length - 1].split('/');
+            pageNumber =  sonuc[sonuc.length - 2];
+        });
+
+        result.data.maxPageNumber = pageNumber;
+
+    }catch (e) {
+
+    }
+
+    res.json(result);
+});
+
 app.get("/downloadAllPage", async (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
     let pageNumber = 0;
     await request('https://nmac.to/', (error, response, html) => {
         const $ = cheerio.load(html);
