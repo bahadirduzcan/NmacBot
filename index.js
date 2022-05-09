@@ -82,8 +82,10 @@ app.get("/getMaxPageNumber", async (req, res, next) => {
                 element.push(link);
             }).get();
 
-            let sonuc = element[element.length - 1].split('/');
-            pageNumber =  sonuc[sonuc.length - 2];
+            if(element.length > 0) {
+                let sonuc = element[element.length - 1].split('/');
+                pageNumber =  sonuc[sonuc.length - 2];
+            }
         });
 
         result.data.maxPageNumber = pageNumber;
