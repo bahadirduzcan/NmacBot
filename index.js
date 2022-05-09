@@ -29,30 +29,38 @@ app.get("/downloadedPage/:id", async (req, res, next) => {
 
 app.get("/dynamicPage/:id", async (req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    await request('https://nmac.to/blog/page/' + req.params.id + '/', (error, response, html) => {
-        const $ = cheerio.load(html);
+    try {
+        await request('https://nmac.to/blog/page/' + req.params.id + '/', (error, response, html) => {
+            const $ = cheerio.load(html);
 
-        let result = $('.panel-wrapper').map((i, el) => {
-            let link = $(el).find('a').attr('href');
-            let img = $(el).find('img').attr('src');
-            let baslik = $(el).find('h2').text();
-            let icerik = $(el).find('div.excerpt').text();
-            if (link) {
-                return {
-                    link: link,
-                    image: img,
-                    title: baslik,
-                    content: icerik,
-                };
-            }
-        }).get();
+            let result = $('.panel-wrapper').map((i, el) => {
+                let link = $(el).find('a').attr('href');
+                let img = $(el).find('img').attr('src');
+                let baslik = $(el).find('h2').text();
+                let icerik = $(el).find('div.excerpt').text();
+                if (link) {
+                    return {
+                        link: link,
+                        image: img,
+                        title: baslik,
+                        content: icerik,
+                    };
+                }
+            }).get();
 
+            res.json({
+                status: "OK",
+                data: result,
+                message: "success",
+            });
+        });
+    }catch(e) {
         res.json({
             status: "OK",
-            data: result,
-            message: "success",
+            data: null,
+            message: "error",
         });
-    });
+    }
 });
 
 app.get("/getMaxPageNumber", async (req, res, next) => {
